@@ -32,8 +32,9 @@
 脚本当前为直接运行模式,输入输出路径硬编码在文件末尾:
 
 ```python
-file_path = r"E:\pythonProject1\YDSJ\4-40\4-40-GOU_Processed.xlsx"
-output_path = r"E:\pythonProject1\YDSJ\4-40\4-40-GOU_0904Processed2.xlsx"
+# 请替换为你的实际文件路径
+file_path = r"path\to\input\input_processed.xlsx"    # 待处理的眼动记录(输入)
+output_path = r"path\to\output\analysis_result.xlsx"  # 分析结果(输出)
 ```
 
 修改这两行为自己的文件后执行:
@@ -50,7 +51,7 @@ python data-processing.py
 - **孤立点不会成为有效注视**:单采样组时长为 0,恒不满足 > 0.2 秒,故单个孤立采样不产生任何注视贡献。
 - **有效时长是各组时长的简单累加**,组与组之间的空洞(> 1 秒的间隔)不计入。
 - **判定完全基于时间序列**:脚本不读取注视坐标列,也不区分采样点来自何种事件,"有效注视"是时间上的启发式定义。
-- **输入必须是 `.xlsx`**(openpyxl 不支持旧版 `.xls`);示例路径指向作者本地 `E:\pythonProject1\YDSJ\4-40\` 下的文件,该数据不在本仓库内,直接运行会因文件缺失报错。
+- **输入必须是 `.xlsx`**(openpyxl 不支持旧版 `.xls`);输入输出路径硬编码在脚本文件末尾,指向作者本地磁盘上的数据,该数据不在本仓库内,直接运行会因找不到文件报错,请先替换为自己的路径。
 - 文件末尾存在一次无副作用的 `TIME_COLUMN_INDEX = 0` 重复赋值,保留仅为与顶部常量对应,可安全删除。
 
 ## 运行环境与依赖

@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# 输出文件(如不需要入库可放开,脚本输出默认在 E 盘,不会出现在本目录)
+*.xlsx
+
+# 系统文件
+.DS_Store
+Thumbs.db

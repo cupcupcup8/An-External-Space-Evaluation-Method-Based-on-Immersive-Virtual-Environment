@@ -1,2 +1,76 @@
-# An-External-Space-Evaluation-Method-Based-on-Immersive-Virtual-Environment
-An External Space Evaluation Method Based on Immersive Virtual Environment Experiments at a Porcelain Culture Commercial District
+# An External Space Evaluation Method Based on Immersive Virtual Environment
+
+基于沉浸式虚拟环境(Immersive Virtual Environment, IVE)的外部空间评价方法——以某瓷文化商业街区为例的实验数据处理与可视化配套代码。
+
+## 项目背景
+
+本研究探索将**眼动追踪**引入沉浸式虚拟环境下的外部空间评价:被试在 VR 场景中漫游观察商业街区外部空间,由眼动仪记录注视采样序列。停留时间越长的注视点通常意味着该处空间要素越能吸引视觉注意,因此可从注视时长分布中提取"有效注视"及其发生位置,作为空间视觉吸引力的量化依据。
+
+本仓库对应研究的数据处理与可视化环节:
+
+- 原始眼动记录先经人工筛查,在 Excel 中**隐藏无效行**(如漂移、眨眼、实验切换产生的脏数据);
+- `data-processing.py` 只读可见行,完成时间序列清洗、注视组聚合与统计;
+- 统计结果用于 `eye-tracking.gh`(Grasshopper 定义)在三维场景中进行可视化分析。
+
+## 仓库文件
+
+| 文件 | 说明 |
+| --- | --- |
+| `data-processing.py` | 眼动时间序列处理脚本:Excel 读取 → 注视分组统计 → 结果写回 Excel |
+| `eye-tracking.gh` | Grasshopper(Rhino)可视化定义,二进制格式,需在 Rhino + Grasshopper 中打开使用 |
+
+## data-processing.py 功能
+
+### 输入
+
+- 一个 `.xlsx` 工作簿,其中**每个工作表**都按同一格式组织:第 1 列(列索引 0)为采样时间,每个可见行代表一个眼动采样点,其余列不参与分析。
+- 人工剔除的无效采样通过 Excel 的"隐藏行"标记,脚本自动跳过隐藏行。
+
+### 处理逻辑
+
+1. **时间解析**:兼容三种时间表示,统一换算为秒——
+   - `datetime.time` 对象;
+   - 字符串 `分:秒.毫秒`,如 `12:34.567`;
+   - 浮点数,按 Excel 的天数计(× 86400)。
+   无法解析的值计为 `invalid` 并跳过,不中断处理。
+2. **注视分组**:按采样先后遍历时间序列,相邻两点间隔 **≤ 1 秒** 归为同一注视组,间隔 > 1 秒则断组。每组记录:起止时刻(秒)、时长、采样点数、是否孤立点(组内仅 1 个采样)。
+3. **有效注视判定**:时长 **> 0.2 秒** 的组记为有效注视组,并累计其总时长、记录首个有效组的起止时刻。
+4. **输出**:写入结果 Excel 的两个工作表——
+   - `time_analysis_summary`:每个输入工作表的汇总(可见采样数、非法值数、分组数、有效注视组数、总有效时长、首个有效组信息);
+   - `group_details`:全部注视组的逐组明细(所属工作表、组号、起止秒、时长、点数、是否孤立)。
+
+### 使用
+
+脚本当前为直接运行模式,输入输出路径硬编码在文件末尾:
+
+```python
+file_path = r"E:\pythonProject1\YDSJ\4-40\4-40-GOU_Processed.xlsx"
+output_path = r"E:\pythonProject1\YDSJ\4-40\4-40-GOU_0904Processed2.xlsx"
+```
+
+修改这两行为自己的文件后执行:
+
+```bash
+python data-processing.py
+```
+
+## 代码约束与假设(使用前必读)
+
+- **只分析"可见行"**:隐藏行一律跳过;若某个工作表所有行都隐藏或时间为空,该表也会出现在汇总中(采样数 0、无有效组)。
+- **第 1 列必须是时间列**(`TIME_COLUMN_INDEX = 0`),且整列只能混合上述三种时间格式;字符串时间仅支持 `分:秒[.毫秒]`,不支持小时段或 `时:分:秒`。
+- **阈值是写死的经验值,不是可配置参数**:断组间隔 1 秒、有效注视时长 0.2 秒均直接出现在分组/统计代码中,如需调整(例如按实验采样率重新标定)必须改代码后重跑。
+- **孤立点不会成为有效注视**:单采样组时长为 0,恒不满足 > 0.2 秒,故单个孤立采样不产生任何注视贡献。
+- **有效时长是各组时长的简单累加**,组与组之间的空洞(> 1 秒的间隔)不计入。
+- **判定完全基于时间序列**:脚本不读取注视坐标列,也不区分采样点来自何种事件,"有效注视"是时间上的启发式定义,不等同于眼动仪软件内的注视事件标准。
+- **输入必须是 `.xlsx`**(openpyxl 不支持旧版 `.xls`);示例数据位于作者本地 `E:\pythonProject1\YDSJ\4-40\`,不在本仓库内,直接运行会因文件缺失报错。
+- 文件末尾存在一次无副作用的 `TIME_COLUMN_INDEX = 0` 重复赋值,保留仅为与顶部常量对应,可安全删除。
+
+## eye-tracking.gh
+
+Grasshopper 可视化定义(二进制 `.gh` 格式),用于把处理后的注视统计映射到三维外部空间场景中呈现。因其为可视化编程文件,内部逻辑无法在文本中展开,请在 Rhino + Grasshopper 中打开定义查看接线与数据接入方式。
+
+## 运行环境与依赖
+
+- Python 3.x;
+- `pandas`、`numpy`、`openpyxl`;
+- `eye-tracking.gh` 需 Rhino(含 Grasshopper)环境。

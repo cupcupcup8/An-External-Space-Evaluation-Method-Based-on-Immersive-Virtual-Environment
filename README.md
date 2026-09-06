@@ -1,87 +1,94 @@
 # An External Space Evaluation Method Based on Immersive Virtual Environment
 
-基于沉浸式虚拟环境(Immersive Virtual Environment, IVE)的外部空间评价方法——以某瓷文化商业街区为例的眼动实验数据处理配套代码。
+Code for processing eye-tracking data in an external-space evaluation study based on an immersive virtual environment (IVE), conducted in a porcelain-culture commercial district.
 
-## 项目背景
+## Project Background
 
-本研究探索将**眼动追踪**引入沉浸式虚拟环境下的外部空间评价:被试在 VR 场景中漫游观察商业街区外部空间,由眼动仪记录注视采样序列。停留时间越长的注视点通常意味着该处空间要素越能吸引视觉注意,因此可从注视时长分布中提取"有效注视"及其发生位置,作为空间视觉吸引力的量化依据。
+This study introduces eye tracking into external-space evaluation within an immersive virtual environment: participants navigate and observe the external space of a commercial district in a VR scene while an eye tracker records sequences of gaze samples. Longer dwell times generally indicate that the corresponding spatial elements attract more visual attention, so effective fixations and their locations can be extracted from the dwell-time distribution and used as quantitative evidence of visual attraction.
 
-本仓库中的两个文件分别对应研究数据处理的不同环节:`eye-tracking.gh`(Grasshopper 工作流)负责从 VR 原始眼动坐标中筛选出落在研究空间/设计元素上的有效注视点;`data-processing.py` 负责对眼动记录时间序列做注视组聚合与统计,输出注视行为的量化指标,供空间评价分析使用。
+The two files in this repository cover different stages of the data-processing pipeline:
 
-## eye-tracking.gh 功能
+- `eye-tracking.gh` (Grasshopper workflow) filters the raw eye-tracking coordinates exported by the VR experiment and keeps the fixations that fall on the study spaces / design elements;
+- `data-processing.py` aggregates the time series of eye-tracking records into fixation groups and produces quantitative measures of gaze behavior for the subsequent spatial analysis.
 
-`eye-tracking.gh` 是一个 Grasshopper(Rhino)工作流,用于处理沉浸式 VR 实验输出的眼动追踪原始三维坐标数据,实现眼动落点导入、坐标判断,输出可供后续空间分析使用的**有效眼动注视点**数据集。整个流程分为**数据读取解析**与**距离筛选过滤**两个模块:
+## eye-tracking.gh (Grasshopper Definition)
 
-### 模块一:原始坐标读取与三维点生成
+`eye-tracking.gh` is a Grasshopper (Rhino) workflow that imports raw 3D eye-tracking coordinates from an immersive VR experiment, checks the positions of the gaze points, and outputs a dataset of **valid fixation points** for later spatial analysis. The workflow is split into two modules: data reading & parsing, and distance-based filtering.
 
-1. **读取原始数据**:将实验所得眼动数据转换为 `.csv`/`.txt` 格式文件(隐藏 Time 列,仅保留 XYZ 坐标),每一行对应一条注视点的 X、Y、Z 原始坐标;
-2. **按行解析**:逐行拆分文件内容,交由自定义 Python 脚本组件处理,提取每条注视点的三维数值,输出三组坐标列表;
-3. **生成三维点**:将三组坐标一一对应,批量在 Rhino 场景中生成代表眼动注视位置的空间点。
+### Module 1: Reading raw coordinates and generating 3D points
 
-### 模块二:基于网格距离的有效落点判断
+1. **Load raw data**: convert the exported eye-tracking data into a `.csv`/`.txt` file with the Time column hidden (X, Y, Z only); each line stores the raw coordinates of one fixation point.
+2. **Parse line by line**: split the file content into lines and process them with a custom Python component, extracting the X, Y, Z values of each fixation into three coordinate lists.
+3. **Generate 3D points**: map the three coordinate lists one-to-one and batch-generate 3D points in the Rhino scene that represent the gaze locations.
 
-> 目的:剔除未落在研究空间/设计元素上的眼动落点——落点距离设计元素过远,代表该注视点不在研究范围内。
+### Module 2: Filtering hit points by mesh distance
 
-1. **场地网格输入**:导入研究片区场地设计元素的 Mesh 模型;
-2. **网格采样点提取**:提取场地组件 Mesh 表面的采样点,用于后续距离比对;
-3. **距离计算**:分别输入眼动注视点与 Mesh 表面采样点两组点集,计算每个眼动点到场地网格的最短空间距离;
-4. **阈值判定**:通过数字滑块设置距离阈值,输出布尔判断:阈值内 = 落在场地网格上/附近的**有效点**,超出阈值 = 漂移产生的**无效点**;
-5. **点集分流与输出**:按判定结果将全部眼动点分流为有效/无效两个集合,统计有效点数量并输出过滤后的最终有效注视点集合,供后续空间要素关联分析使用。
+> Purpose: remove gaze points that do not land on the study space / design elements — a point too far from the element meshes is outside the study scope and should be discarded.
 
-> 使用注意:需保证 VR 导出的坐标单位与 Rhino 模型单位一致;文件路径不能包含中文或特殊字符,否则会出现读取无数据的问题;正式分析前应在 Rhino 中导入整体模型,并保证每个设计元素的组件可被单独选中,以便模块二完成元素内落点判断。
+1. **Mesh input**: import the meshes of the design elements in the study area.
+2. **Sample points**: extract sample points on the mesh surfaces for the distance comparison.
+3. **Distance calculation**: compute the shortest distance from every gaze point to the area meshes.
+4. **Threshold judgment**: compare the distances with a threshold set by a number slider. Within the threshold → valid point (landed on / near a design element); beyond the threshold → invalid point (drift).
+5. **Dispatch & output**: split all gaze points into valid and invalid sets, count the valid set, and output the filtered fixation points for the subsequent element–space association analysis.
 
-### 与 data-processing.py 的分工
+> Notes: the coordinate unit of the VR export must match the unit of the Rhino model; the input file path must not contain Chinese characters or special characters, otherwise no data will be read; import the whole model in Rhino and keep every design element selectable as a separate component so that Module 2 can decide which element a gaze point belongs to.
 
-该流程输出的结果是发生在单个设计元素/空间范围内的全部注视点坐标。之后在 Excel 中为这些有效注视点匹配对应的采样时刻(Time),形成仅含有效注视点的数据文件,再交由 `data-processing.py` 完成时间序列上的注视组聚合与统计。
+### Relationship with data-processing.py
 
-## data-processing.py 功能
+The output of this workflow is the coordinates of all fixations that occurred within individual design elements / spaces. These valid points are then matched with their sampling times (Time) in a spreadsheet to build a file containing only valid fixations, which is handed over to `data-processing.py` for the time-series aggregation.
 
-### 输入
+## data-processing.py
 
-- 一个 `.xlsx` 工作簿,其中**每个工作表**都按同一格式组织:第 1 列(列索引 0)为采样时间,每个可见(未隐藏)行代表一个眼动采样点,其余列不参与分析。
+### Input
 
-### 处理逻辑
+One `.xlsx` workbook in which **every worksheet** follows the same layout: column 1 (index 0) stores the sampling time, each visible (non-hidden) row represents one gaze sample, and the remaining columns are not used.
 
-1. **时间解析**:兼容三种时间表示,统一换算为秒——
-   - `datetime.time` 对象;
-   - 字符串 `分:秒.毫秒`,如 `12:34.567`;
-   - 浮点数,按 Excel 的天数计(× 86400)。
-   无法解析的值计为 `invalid` 并跳过,不中断处理。
-2. **注视分组**:按采样先后遍历时间序列,相邻两点间隔 **≤ 1 秒** 归为同一注视组,间隔 > 1 秒则断组。每组记录:起止时刻(秒)、时长、采样点数、是否孤立点(组内仅 1 个采样)。
-3. **有效注视判定**:时长 **> 0.2 秒** 的组记为有效注视组,并累计其总时长、记录首个有效组的起止时刻。
-4. **输出**:写入结果 Excel 的两个工作表——
-   - `time_analysis_summary`:每个输入工作表的汇总(可见采样数、非法值数、分组数、有效注视组数、总有效时长、首个有效组信息);
-   - `group_details`:全部注视组的逐组明细(所属工作表、组号、起止秒、时长、点数、是否孤立)。
+### Processing steps
 
-### 使用
+1. **Time parsing**: three representations are accepted and converted to seconds —
+   - `datetime.time` objects;
+   - strings formatted as `minutes:seconds.milliseconds`, e.g. `12:34.567`;
+   - floats interpreted as Excel day counts (multiplied by 86400).
 
-脚本当前为直接运行模式,输入输出路径硬编码在文件末尾:
+   Unparseable values are counted as invalid and skipped without interrupting the run.
+
+2. **Fixation grouping**: samples are visited in order; consecutive samples separated by **≤ 1 second** are merged into one group, and a gap **> 1 second** starts a new group. Each group records its start/end time (seconds), duration, number of samples, and whether it is an isolated sample (a group with a single sample).
+
+3. **Significant fixation**: groups with a duration **> 0.2 seconds** are counted as significant fixation groups; the total significant duration and the first significant group are also reported.
+
+4. **Output**: two worksheets are written to the result workbook —
+   - `time_analysis_summary`: per-worksheet summary (visible sample count, invalid count, group count, significant group count, total significant duration, first significant group information);
+   - `group_details`: per-group details (worksheet, group number, start/end seconds, duration, sample count, isolated flag).
+
+### Usage
+
+The script currently runs directly, and the input/output paths are hardcoded at the end of the file:
 
 ```python
-# 请替换为你的实际文件路径
-file_path = r"path\to\input\input_processed.xlsx"    # 待处理的眼动记录(输入)
-output_path = r"path\to\output\analysis_result.xlsx"  # 分析结果(输出)
+# Replace these with your actual file paths
+file_path = r"path\to\input\input_processed.xlsx"    # eye-tracking records (input)
+output_path = r"path\to\output\analysis_result.xlsx"  # analysis result (output)
 ```
 
-修改这两行为自己的文件后执行:
+Then run:
 
 ```bash
 python data-processing.py
 ```
 
-## 代码约束与假设(使用前必读)
+## Constraints & Assumptions (read before use)
 
-- **只分析"可见行"**:脚本遍历工作表时跳过被隐藏的行,可见行数即参与分析的采样点数;若某个工作表没有可见行或时间均为空,该表仍会出现在汇总中(采样数 0、无有效组)。
-- **第 1 列必须是时间列**(`TIME_COLUMN_INDEX = 0`),且整列只能混合上述三种时间格式;字符串时间仅支持 `分:秒[.毫秒]`,不支持小时段或 `时:分:秒`。
-- **阈值是写死的经验值,不是可配置参数**:断组间隔 1 秒、有效注视时长 0.2 秒均直接出现在分组/统计代码中,如需调整必须改代码后重跑。
-- **孤立点不会成为有效注视**:单采样组时长为 0,恒不满足 > 0.2 秒,故单个孤立采样不产生任何注视贡献。
-- **有效时长是各组时长的简单累加**,组与组之间的空洞(> 1 秒的间隔)不计入。
-- **判定完全基于时间序列**:脚本不读取注视坐标列,也不区分采样点来自何种事件,"有效注视"是时间上的启发式定义。
-- **输入必须是 `.xlsx`**(openpyxl 不支持旧版 `.xls`);输入输出路径硬编码在脚本文件末尾,指向作者本地磁盘上的数据,该数据不在本仓库内,直接运行会因找不到文件报错,请先替换为自己的路径。
-- 文件末尾存在一次无副作用的 `TIME_COLUMN_INDEX = 0` 重复赋值,保留仅为与顶部常量对应,可安全删除。
+- **Only visible rows are analyzed**: hidden rows are skipped; a worksheet with no visible rows or with empty time values still appears in the summary (zero samples, no significant groups).
+- **Column 1 must be the time column** (`TIME_COLUMN_INDEX = 0`), and the whole column may only mix the three formats listed above; string times only support `minutes:seconds[.milliseconds]` — neither hours nor `hh:mm:ss` are supported.
+- **The thresholds are hardcoded empirical values, not configurable parameters**: the 1-second grouping gap and the 0.2-second significance duration are set inside the code; adjusting them requires editing the code and re-running.
+- **An isolated sample never becomes a significant fixation**: a single-sample group has zero duration and can never exceed 0.2 s, so it contributes nothing.
+- **The significant duration is a plain sum of per-group durations**; the gaps between groups (> 1 s) are not included.
+- **The judgment is purely time-based**: coordinate columns are not read and sample events are not distinguished; "significant fixation" is a heuristic definition derived from the time series.
+- **The input must be `.xlsx`** (openpyxl does not support legacy `.xls`); the example paths point to files on the author's local disk that are not part of this repository, so running the script as-is will fail — replace them first.
+- The duplicate `TIME_COLUMN_INDEX = 0` assignment near the end of the script is harmless and can be safely removed.
 
-## 运行环境与依赖
+## Environment & Dependencies
 
 - Python 3.x;
-- `pandas`、`numpy`、`openpyxl`;
-- `eye-tracking.gh` 需在 Rhino + Grasshopper 环境中运行。
+- `pandas`, `numpy`, `openpyxl`;
+- `eye-tracking.gh` requires a Rhino + Grasshopper environment.

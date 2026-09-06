@@ -153,8 +153,9 @@ def process_all_sheets(file_path, output_path):
     return {"summary": results_df, "group_details": group_details_df}
 
 
-file_path = r"E:\pythonProject1\YDSJ\4-40\4-40-GOU_Processed.xlsx"
-output_path = r"E:\pythonProject1\YDSJ\4-40\4-40-GOU_0904Processed2.xlsx"
+# 请替换为你的实际文件路径
+file_path = r"path\to\input\input_processed.xlsx"    # 待处理的眼动记录(输入)
+output_path = r"path\to\output\analysis_result.xlsx"  # 分析结果(输出)
 
 TIME_COLUMN_INDEX = 0
 
